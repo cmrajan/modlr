@@ -43,7 +43,9 @@ type DbMap struct {
 	// Dialect implementation to use with this map
 	Dialect Dialect
 
-	tables    []*TableMap
+	tables []*TableMap
+	models []*ModelMap
+
 	logger    *log.Logger
 	logPrefix string
 	mapper    *reflectx.Mapper
@@ -138,9 +140,67 @@ func (m *DbMap) AddTable(i interface{}, name ...string) *TableMap {
 
 }
 
+func (m *DbMap) AddModel(i interface{}, name ...string) *ModelMap {
+	// Name := ""
+	// if len(name) > 0 {
+	// 	Name = name[0]
+	// }
+
+	// t := reflect.TypeOf(i)
+	// // Use sqlx's NameMapper function if no name is supplied
+	// if len(Name) == 0 {
+	// 	Name = TableNameMapper(t.Name())
+	// }
+
+	// check if we have a table for this type already
+	// if so, update the name and return the existing pointer
+	// for i := range m.models {
+	// 	model := m.models[i]
+	// 	if table.gotype == t {
+	// 		table.TableName = Name
+	// 		return model
+	// 	}
+	// }
+
+	// tmap := &TableMap{gotype: t, TableName: Name, dbmap: m, mapper: m.mapper}
+	// tmap.setupHooks(i)
+	mmap := &ModelMap{gotype: t, TableName: Name, dbmap: m, mapper: m.mapper}
+	mmap.setupHooks(i)
+
+	n := t.NumField()
+	tmap.Columns = make([]*ColumnMap, 0, n)
+	for i := 0; i < n; i++ {
+		f := t.Field(i)
+		columnName := f.Tag.Get("db")
+		if columnName == "" {
+			columnName = sqlx.NameMapper(f.Name)
+		}
+
+		cm := &ColumnMap{
+			ColumnName: columnName,
+			Transient:  columnName == "-",
+			fieldName:  f.Name,
+			gotype:     f.Type,
+			table:      tmap,
+		}
+		tmap.Columns = append(tmap.Columns, cm)
+		if cm.fieldName == "Version" {
+			tmap.version = tmap.Columns[len(tmap.Columns)-1]
+		}
+	}
+	m.tables = append(m.tables, tmap)
+
+	return tmap
+
+}
+
 // AddTableWithName adds a new mapping of the interface to a table name.
 func (m *DbMap) AddTableWithName(i interface{}, name string) *TableMap {
 	return m.AddTable(i, name)
+}
+
+func (m *DbMap) AddModelWithName(i interface{}, name string) *ModelMap {
+	return m.AddModel(i, name)
 }
 
 // CreateTablesSql returns create table SQL as a map of table names to
