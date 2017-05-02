@@ -8,7 +8,7 @@
 // Use of this source code is governed by a MIT-style license that can be
 // found in the LICENSE file.
 //
-package modl
+package modlr
 
 import (
 	"bytes"
@@ -140,7 +140,31 @@ func (m *DbMap) AddTable(i interface{}, name ...string) *TableMap {
 
 }
 
-func (m *DbMap) AddModel(i interface{}, name ...string) *ModelMap {
+func (m *DbMap) AddModel(name string) *ModelMap {
+
+	db, err := sqlx.Open("sqlite3", "modeldata.db")
+	if err != nil {
+		fmt.Printf("Error in creating DB Conn: %s\n", err)
+		return nil
+	}
+
+	var modelNames []string
+	type modelData struct {
+		Name     string `db:"name"`
+		Field    string `db:"field"`
+		DBColumn string `db:"colname"`
+		DBType   string `db:"coltype"`
+	}
+
+	md := []modelData{}
+
+	err = db.Select(&modelNames, "select distinct name from model where name =$1", name)
+	if err != nil {
+		fmt.Printf("Couldn't get rows :%s\n", err)
+		return nil
+
+	}
+
 	// Name := ""
 	// if len(name) > 0 {
 	// 	Name = name[0]
@@ -164,33 +188,8 @@ func (m *DbMap) AddModel(i interface{}, name ...string) *ModelMap {
 
 	// tmap := &TableMap{gotype: t, TableName: Name, dbmap: m, mapper: m.mapper}
 	// tmap.setupHooks(i)
-	mmap := &ModelMap{gotype: t, TableName: Name, dbmap: m, mapper: m.mapper}
-	mmap.setupHooks(i)
 
-	n := t.NumField()
-	tmap.Columns = make([]*ColumnMap, 0, n)
-	for i := 0; i < n; i++ {
-		f := t.Field(i)
-		columnName := f.Tag.Get("db")
-		if columnName == "" {
-			columnName = sqlx.NameMapper(f.Name)
-		}
-
-		cm := &ColumnMap{
-			ColumnName: columnName,
-			Transient:  columnName == "-",
-			fieldName:  f.Name,
-			gotype:     f.Type,
-			table:      tmap,
-		}
-		tmap.Columns = append(tmap.Columns, cm)
-		if cm.fieldName == "Version" {
-			tmap.version = tmap.Columns[len(tmap.Columns)-1]
-		}
-	}
-	m.tables = append(m.tables, tmap)
-
-	return tmap
+	return nil
 
 }
 

@@ -1,4 +1,4 @@
-package modl
+package modlr
 
 import (
 	"database/sql"

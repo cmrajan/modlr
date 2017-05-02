@@ -1,4 +1,4 @@
-package modl
+package modlr
 
 // Changes Copyright 2013 Jason Moiron.  Original Gorp code
 // Copyright 2012 James Cooper. All rights reserved.
