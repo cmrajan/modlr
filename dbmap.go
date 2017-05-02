@@ -148,48 +148,40 @@ func (m *DbMap) AddModel(name string) *ModelMap {
 		return nil
 	}
 
-	var modelNames []string
+	var modelName string
 	type modelData struct {
-		Name     string `db:"name"`
-		Field    string `db:"field"`
-		DBColumn string `db:"colname"`
-		DBType   string `db:"coltype"`
+		Name         string `db:"name"`
+		Field        string `db:"field"`
+		DBColumnName string `db:"colname"`
+		DBColumnType string `db:"coltype"`
 	}
 
-	md := []modelData{}
-
-	err = db.Select(&modelNames, "select distinct name from model where name =$1", name)
+	err = db.Get(&modelName, "select distinct name from model where name =$1", name)
 	if err != nil {
-		fmt.Printf("Couldn't get rows :%s\n", err)
+		fmt.Printf("no model present :%s\n", err)
 		return nil
 
 	}
+	mmap := &ModelMap{TableName: modelName, ModelName: modelName, dbmap: m}
+	fmt.Println("model name passed##########", modelName)
+	md := []modelData{}
+	err = db.Select(&md, "SELECT name,field,colname,coltype FROM model where name =$1", modelName)
+	if err != nil {
+		fmt.Printf("Couldn't get model data for name %s :%s\n", name, err)
+		return nil
+	}
+	colNums := len(md)
 
-	// Name := ""
-	// if len(name) > 0 {
-	// 	Name = name[0]
-	// }
+	fld := &FieldMap{}
+	mmap.Fields = make([]*FieldMap, 0, colNums)
+	for j := 0; j < colNums; j++ {
+		fld = &FieldMap{FieldName: md[j].Field, ColumnName: md[j].DBColumnName, dbColumnType: md[j].DBColumnType}
 
-	// t := reflect.TypeOf(i)
-	// // Use sqlx's NameMapper function if no name is supplied
-	// if len(Name) == 0 {
-	// 	Name = TableNameMapper(t.Name())
-	// }
+		mmap.Fields = append(mmap.Fields, fld)
 
-	// check if we have a table for this type already
-	// if so, update the name and return the existing pointer
-	// for i := range m.models {
-	// 	model := m.models[i]
-	// 	if table.gotype == t {
-	// 		table.TableName = Name
-	// 		return model
-	// 	}
-	// }
-
-	// tmap := &TableMap{gotype: t, TableName: Name, dbmap: m, mapper: m.mapper}
-	// tmap.setupHooks(i)
-
-	return nil
+	}
+	fmt.Printf("Generated mmap=======>%#v", mmap)
+	return mmap
 
 }
 
@@ -199,7 +191,7 @@ func (m *DbMap) AddTableWithName(i interface{}, name string) *TableMap {
 }
 
 func (m *DbMap) AddModelWithName(i interface{}, name string) *ModelMap {
-	return m.AddModel(i, name)
+	return m.AddModel(name)
 }
 
 // CreateTablesSql returns create table SQL as a map of table names to

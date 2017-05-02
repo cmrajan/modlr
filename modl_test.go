@@ -941,6 +941,7 @@ func connect(driver string) *sql.DB {
 		panic("MODL_TEST_DSN env variable is not set. Please see README.md")
 	}
 
+	os.Remove("modl.db")
 	db, err := sql.Open(driver, dsn)
 	if err != nil {
 		panic("Error connecting to db: " + err.Error())

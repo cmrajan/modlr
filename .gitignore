@@ -3,6 +3,7 @@ _testmain.go
 _obj
 *~
 *.6
+.DS_Store
 6.out
 environ
 modl.db

@@ -39,7 +39,6 @@ type ModelMap struct {
 	ModelName  string
 	TableName  string
 	Keys       []*ColumnMap
-	Columns    []*ColumnMap
 	Fields     []*FieldMap
 	gotype     reflect.Type
 	version    *ColumnMap
@@ -357,14 +356,15 @@ type FieldMap struct {
 	MaxSize int
 
 	// the table this column belongs to
-	table      *TableMap
-	model      *ModelMap
-	fieldName  string
-	gotype     reflect.Type
-	sqltype    string
-	createSql  string
-	isPK       bool
-	isAutoIncr bool
+	table *TableMap
+	model *ModelMap
+
+	dbColumnType string
+	gotype       reflect.Type
+	sqltype      string
+	createSql    string
+	isPK         bool
+	isAutoIncr   bool
 }
 
 // SetTransient allows you to mark the column as transient. If true
