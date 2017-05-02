@@ -9,4 +9,4 @@ Modlr is a Metadata driven application platform to build business(primarily orie
 
 ## Thanks
 
-* Modlr is heavily built on [Modl](https://github.com/jmoiron/modl), which again is inspired from (Gorp)[https://github.com/go-gorp/gorp]
+* Modlr is heavily built on [Modl](https://github.com/jmoiron/modl), which again is inspired from  [Gorp](https://github.com/go-gorp/gorp)
