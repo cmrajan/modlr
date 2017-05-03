@@ -121,6 +121,7 @@ func TestCreateTablesIfNotExists(t *testing.T) {
 }
 
 func TestPersistentUser(t *testing.T) {
+
 	dbmap := newDbMap()
 	dbmap.Exec("drop table if exists persistentuser")
 	if len(os.Getenv("MODL_TEST_TRACE")) > 0 {

@@ -97,6 +97,35 @@ func (plan bindPlan) createBindInstance(elem reflect.Value) bindInstance {
 	return bi
 }
 
+func (plan bindPlan) mcreateBindInstance(model string) bindInstance {
+	bi := bindInstance{query: plan.query, autoIncrIdx: plan.autoIncrIdx, versField: plan.versField}
+	if plan.versField != "" {
+		bi.existingVersion = 1
+	}
+
+	for i := 0; i < len(plan.argFields); i++ {
+		k := plan.argFields[i]
+		if k == versFieldConst {
+			newVer := bi.existingVersion + 1
+			bi.args = append(bi.args, newVer)
+			if bi.existingVersion == 0 {
+				bi.existingVersion = 1 //elem.FieldByName(plan.versField).SetInt(int64(newVer))
+			}
+		} else {
+			val := elem.FieldByName(k).Interface()
+			bi.args = append(bi.args, val)
+		}
+	}
+
+	// for i := 0; i < len(plan.keyFields); i++ {
+	// 	k := plan.keyFields[i]
+	// 	val := elem.FieldByName(k).Interface()
+	// 	bi.keys = append(bi.keys, val)
+	// }
+
+	return bi
+}
+
 type bindInstance struct {
 	query           string
 	args            []interface{}
@@ -126,8 +155,8 @@ type SqlExecutor interface {
 // Compile-time check that DbMap and Transaction implement the SqlExecutor
 // interface.
 var (
-        _ SqlExecutor = &DbMap{}
-        _ SqlExecutor = &Transaction{}
+	_ SqlExecutor = &DbMap{}
+	_ SqlExecutor = &Transaction{}
 )
 
 ///////////////
@@ -313,6 +342,56 @@ func update(m *DbMap, e SqlExecutor, list ...interface{}) (int64, error) {
 func insert(m *DbMap, e SqlExecutor, list ...interface{}) error {
 	var err error
 	var table *TableMap
+	var elem reflect.Value
+
+	for _, ptr := range list {
+		table, elem, err = tableForPointer(m, ptr, false)
+		if err != nil {
+			return err
+		}
+
+		if table.CanPreInsert {
+			err = ptr.(PreInserter).PreInsert(e)
+			if err != nil {
+				return err
+			}
+		}
+
+		bi := table.bindInsert(elem)
+
+		if bi.autoIncrIdx > -1 {
+			id, err := m.Dialect.InsertAutoIncr(e, bi.query, bi.args...)
+			if err != nil {
+				return err
+			}
+			f := elem.Field(bi.autoIncrIdx)
+			k := f.Kind()
+			if (k == reflect.Int) || (k == reflect.Int16) || (k == reflect.Int32) || (k == reflect.Int64) {
+				f.SetInt(id)
+			} else {
+				return fmt.Errorf("modl: Cannot set autoincrement value on non-Int field. SQL=%s  autoIncrIdx=%d", bi.query, bi.autoIncrIdx)
+			}
+		} else {
+			_, err := e.Exec(bi.query, bi.args...)
+			if err != nil {
+				return err
+			}
+		}
+
+		if table.CanPostInsert {
+			err = ptr.(PostInserter).PostInsert(e)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func minsert(m *DbMap, e SqlExecutor, list ...interface{}) error {
+	var err error
+	var table *TableMap
+	//var model *ModelMap
 	var elem reflect.Value
 
 	for _, ptr := range list {

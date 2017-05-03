@@ -38,10 +38,10 @@ type ModelMap struct {
 	// Name of database table.
 	ModelName  string
 	TableName  string
-	Keys       []*ColumnMap
+	Keys       []*FieldMap
 	Fields     []*FieldMap
 	gotype     reflect.Type
-	version    *ColumnMap
+	version    *FieldMap
 	insertPlan bindPlan
 	updatePlan bindPlan
 	deletePlan bindPlan
@@ -307,9 +307,65 @@ func (t *TableMap) bindInsert(elem reflect.Value) bindInstance {
 
 		plan.query = s.String()
 		t.insertPlan = plan
+		fmt.Println("$$$$$$$Insert string:$$$$$$$$$$", s.String())
 	}
 
 	return plan.createBindInstance(elem)
+}
+
+func (m *ModelMap) mbindInsert(model string) bindInstance {
+	plan := m.insertPlan
+	if plan.query == "" {
+		plan.autoIncrIdx = -1
+
+		s := bytes.Buffer{}
+		s2 := bytes.Buffer{}
+		s.WriteString(fmt.Sprintf("insert into %s (", m.dbmap.Dialect.QuoteField(m.TableName)))
+
+		x := 0
+		first := true
+		for y := range m.Fields {
+			col := m.Fields[y]
+
+			if !col.Transient {
+				if !first {
+					s.WriteString(",")
+					s2.WriteString(",")
+				}
+				s.WriteString(m.dbmap.Dialect.QuoteField(col.ColumnName))
+
+				if col.isAutoIncr {
+					s2.WriteString(m.dbmap.Dialect.AutoIncrBindValue())
+					plan.autoIncrIdx = y
+				} else {
+					s2.WriteString(m.dbmap.Dialect.BindVar(x))
+					if col == m.version {
+						plan.versField = col.FieldName
+						plan.argFields = append(plan.argFields, versFieldConst)
+					} else {
+						plan.argFields = append(plan.argFields, col.FieldName)
+					}
+
+					x++
+				}
+
+				first = false
+			}
+		}
+		s.WriteString(") values (")
+		s.WriteString(s2.String())
+		s.WriteString(")")
+		// if plan.autoIncrIdx > -1 {
+		// 	s.WriteString(m.dbmap.Dialect.AutoIncrInsertSuffix(m.Columns[plan.autoIncrIdx]))
+		// }
+		s.WriteString(";")
+
+		plan.query = s.String()
+		m.insertPlan = plan
+		fmt.Println("$$$$$$$Insert string:$$$$$$$$$$", s.String())
+	}
+
+	return plan.mcreateBindInstance(model)
 }
 
 // ColumnMap represents a mapping between a Go struct field and a single

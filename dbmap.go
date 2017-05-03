@@ -58,6 +58,8 @@ func NewDbMap(db *sql.DB, dialect Dialect) *DbMap {
 		Dialect: dialect,
 		Dbx:     sqlx.NewDb(db, dialect.DriverName()),
 		mapper:  reflectx.NewMapperFunc("db", sqlx.NameMapper),
+		// logger:    log.New(os.Stdout, "modltest: ", log.Lmicroseconds),
+		// logPrefix: "modeltest: ",
 	}
 }
 
@@ -162,7 +164,7 @@ func (m *DbMap) AddModel(name string) *ModelMap {
 		return nil
 
 	}
-	mmap := &ModelMap{TableName: modelName, ModelName: modelName, dbmap: m}
+	mmap := &ModelMap{TableName: "userdata", ModelName: modelName, dbmap: m}
 	fmt.Println("model name passed##########", modelName)
 	md := []modelData{}
 	err = db.Select(&md, "SELECT name,field,colname,coltype FROM model where name =$1", modelName)
