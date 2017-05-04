@@ -165,7 +165,7 @@ func (m *DbMap) AddModel(name string) *ModelMap {
 
 	}
 	mmap := &ModelMap{TableName: "userdata", ModelName: modelName, dbmap: m}
-	fmt.Println("model name passed##########", modelName)
+	//fmt.Println("model name passed", modelName)
 	md := []modelData{}
 	err = db.Select(&md, "SELECT name,field,colname,coltype FROM model where name =$1", modelName)
 	if err != nil {
