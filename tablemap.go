@@ -258,6 +258,63 @@ func (t *TableMap) bindUpdate(elem reflect.Value) bindInstance {
 	return plan.createBindInstance(elem)
 }
 
+func (t *TableMap) mbindUpdate(elem reflect.Value) bindInstance {
+	plan := t.updatePlan
+	if plan.query == "" {
+
+		s := bytes.Buffer{}
+		s.WriteString(fmt.Sprintf("update %s set ", t.dbmap.Dialect.QuoteField(t.TableName)))
+		x := 0
+
+		for y := range t.Columns {
+			col := t.Columns[y]
+			if !col.isPK && !col.Transient {
+				if x > 0 {
+					s.WriteString(", ")
+				}
+				s.WriteString(t.dbmap.Dialect.QuoteField(col.ColumnName))
+				s.WriteString("=")
+				s.WriteString(t.dbmap.Dialect.BindVar(x))
+
+				if col == t.version {
+					plan.versField = col.fieldName
+					plan.argFields = append(plan.argFields, versFieldConst)
+				} else {
+					plan.argFields = append(plan.argFields, col.fieldName)
+				}
+				x++
+			}
+		}
+
+		s.WriteString(" where ")
+		for y := range t.Keys {
+			col := t.Keys[y]
+			if y > 0 {
+				s.WriteString(" and ")
+			}
+			s.WriteString(t.dbmap.Dialect.QuoteField(col.ColumnName))
+			s.WriteString("=")
+			s.WriteString(t.dbmap.Dialect.BindVar(x))
+
+			plan.argFields = append(plan.argFields, col.fieldName)
+			plan.keyFields = append(plan.keyFields, col.fieldName)
+			x++
+		}
+		if plan.versField != "" {
+			s.WriteString(" and ")
+			s.WriteString(t.dbmap.Dialect.QuoteField(t.version.ColumnName))
+			s.WriteString("=")
+			s.WriteString(t.dbmap.Dialect.BindVar(x))
+			plan.argFields = append(plan.argFields, plan.versField)
+		}
+		s.WriteString(";")
+
+		plan.query = s.String()
+		t.updatePlan = plan
+	}
+
+	return plan.createBindInstance(elem)
+}
 func (t *TableMap) bindInsert(elem reflect.Value) bindInstance {
 	plan := t.insertPlan
 	if plan.query == "" {
