@@ -112,8 +112,8 @@ func (plan bindPlan) mcreateBindInstance(model string) bindInstance {
 				bi.existingVersion = 1 //elem.FieldByName(plan.versField).SetInt(int64(newVer))
 			}
 		} else {
-			val := elem.FieldByName(k).Interface()
-			bi.args = append(bi.args, val)
+			//		val := elem.FieldByName(k).Interface()
+			//bi.args = append(bi.args, val)
 		}
 	}
 
